@@ -37,43 +37,12 @@ void usage(char *argv[])
 
 int main(int argc, char *argv[])
 {
-  const char *device = "/dev/ttyACM1", *dumpFileName = 0;
-  int        sensor  = -1;
-
-  for (int opt; (opt = getopt(argc, argv, "d:f:s:")) >= 0;) {
-    switch (opt) {
-      case 'd': device = optarg;
-		break;
-
-      case 'f': dumpFileName = optarg;
-		break;
-
-      case 's': sensor = atoi(optarg);
-		break;
-
-      default:	usage(argv);
-    }
-  }
-
-  if (optind < argc)
-    usage(argv);
+  const char *device = "/dev/ttyACM1", *dumpFileName = "output.txt";
 
   PowerSensor::PowerSensor powerSensor(device);
   powerSensor.dump(dumpFileName);
 
-  PowerSensor::State states[2];
-  states[0] = powerSensor.read();
-
-  for (uint32_t micros = 100, i = 1; micros <= MAX_MICRO_SECONDS; micros *= 2, i ^= 1) {
-    usleep(micros);
-    states[i] = powerSensor.read();
-
-    std::cout << "exp. time: " << micros * 1e-6 << " s, " "measured: " <<
-      PowerSensor::seconds(states[i ^ 1], states[i]) << " s, " <<
-      PowerSensor::Joules(states[i ^ 1], states[i], sensor) << " J, " <<
-      PowerSensor::Watt(states[i ^ 1], states[i], sensor) << " W" <<
-      std::endl;
-  }
+  usleep(100000);
   
   return 0;
 }

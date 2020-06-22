@@ -158,6 +158,9 @@ void serialEvent()
         sendMarkerNext = 1;
         break;
 
+      case 'C': // C: calibrate character, initiates the calibration process;
+        
+
       default:
         break;
     }
