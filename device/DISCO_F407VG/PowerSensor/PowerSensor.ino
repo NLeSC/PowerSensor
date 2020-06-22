@@ -223,6 +223,12 @@ void configureDMA()
   // set DMA to circular mode so it will refill the increment once its empty;
   DMA2_Stream0->CR |= DMA_SxCR_CIRC;
 
+  // enable transfer complete interrupt;
+  //DMA2_Stream0->CR |= DMA_SxCR_TCIE;
+
+  // disable fifo/overrun/underrun interrupts;
+  //DMA2_Stream0->FCR |= &= ~(DMA_SxFCR_FEIE);
+
   // after all configurations are done, set the enable bit;
   DMA2_Stream0->CR |= DMA_SxCR_EN;
 }
@@ -233,6 +239,10 @@ void configureADC()
   ADC1->CR2 &= ~(ADC_CR2_SWSTART);
   ADC1->CR2 &= ~(ADC_CR2_ADON);
 
+  //ADC_ChannelConfTypeDef sConfig;
+
+  //hadc1.Instance = ADC1;
+ 
   // initialise sensors;
   for (int i = 0; i < MAX_SENSORS; i++)
   { 
@@ -296,6 +306,17 @@ void generateVirtualAddresses()
   }
 }
 
+int thing = 0;
+
+void DMA2_Stream0_IRQHandler(void) {
+  NVIC_ClearPendingIRQ(DMA2_Stream0_IRQn);
+  thing = 1;
+  NVIC_DisableIRQ(DMA2_Stream0_IRQn);
+  //if (DMA2->LISR & (1 << 4)) {
+  //  Serial.println("a");
+  //}
+}
+
 void setup()
 {
   // baudrate 4M;
@@ -303,6 +324,8 @@ void setup()
 
   // populate VirtAddVarTab memory with addresses incremented from the BASE;
   generateVirtualAddresses();
+
+  DMA_InitTypeDef DMA_InitStructure;
 
   // unlock flash memory;
   HAL_FLASH_Unlock();
@@ -313,6 +336,14 @@ void setup()
   // configure the sensors from emulated EEPROM;
   configureFromEEEPROM();
 
+  //NVIC_SetPriority(DMA2_Stream0_IRQn, 2);
+
+  NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+
+  NVIC_SetPendingIRQ(DMA2_Stream0_IRQn);
+
+  NVIC_DisableIRQ(DMA2_Stream0_IRQn);
+  
   // enable ADC system clock;
   RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
 
@@ -321,15 +352,32 @@ void setup()
 
   // configure the ADC;
   configureADC();
+
+
 }
 
 void loop()
 { 
-  // check if the conversion has ended;
-  if (DMA2->LISR & (1 << 4))
-  {
-    ADC_Handler();
+  delay(1000);
+  if (DMA2->LISR & (1 << 4)) {
+    //Serial.write("HTIF");
   }
+  if (DMA2->LISR & (1 << 5)) {
+    //Serial.write("TCIF");
+  }
+  //NVIC_SetPendingIRQ(DMA2_Stream0_IRQn);  
+
+  //Serial.write(DMA2_Stream0->CR,HEX);
+  Serial.println(thing);  
+
+  DMA2->LIFCR |= (1 << 4);
+  DMA2->LIFCR |= (1 << 5);
+
+  // check if the conversion has ended;
+  //if (DMA2->LISR & (1 << 4))
+  //{
+  //  ADC_Handler();
+  //}
   // manually check if there is input from the host;
-  serialEvent();  
+  //serialEvent();  
 }
