@@ -301,7 +301,7 @@ void setup()
   // baudrate 4M;
   Serial.begin(40000000);
 
-  // populate VirtAddVarTab memory with addresses incremented from BASE;
+  // populate VirtAddVarTab memory with addresses incremented from the BASE;
   generateVirtualAddresses();
 
   // unlock flash memory;
