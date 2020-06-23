@@ -1,4 +1,7 @@
 #include <Arduino.h>
+#include <TFT.h>
+#include <SPI.h>
+
 #include "eeprom_emulation.h"
 
 // define max sensors and emulated EEPROM base address
@@ -139,11 +142,13 @@ void serialEvent()
 
       // S: start character, turns the streaming of values on;
       case 'S':
+        NVIC_EnableIRQ(DMA2_Stream0_IRQn);
         streamValues = true;
         break;
 
       // T: stop character, turns the streaming of values off;
       case 'T':
+        NVIC_DisableIRQ(DMA2_Stream0_IRQn);
         streamValues = false;
         break;
 
@@ -167,22 +172,27 @@ void serialEvent()
   }
 }
 
-// "__irq_adc" is used as weak method in stm32f407 CMSIS startup file;
-void ADC_Handler(void)
-{
-  if (streamValues)
-  {  
-  // for every sensor there is send value;
-  for (int i = 0; i < activeSensorCount; i++)
+extern "C" {
+  void DMA2_Stream0_IRQHandler(void)
+//  void ADC_Handler(void)
   {
-    uint16_t level = dmaBuffer[i]; //ADC1_BASE->DR;
+    NVIC_ClearPendingIRQ(DMA2_Stream0_IRQn);
+    DMA2->LIFCR |= (0x3 << 4);
+    Serial.print(0);
+    if (streamValues)
+    {  
+      // for every sensor there is send value;
+      for (int i = 0; i < activeSensorCount; i++)
+      {
+        uint16_t level = dmaBuffer[i]; //ADC1_BASE->DR;
 
-    // write the level, write() only writes per byte;
-    Serial.write(((i & 0x7) << 4) | ((level & 0x3C0) >> 6) | (1 << 7));
-    Serial.write(((sendMarkerNext << 6) | (level & 0x3F)) & ~(1 << 7));
+        // write the level, write() only writes per byte;
+        Serial.write(((i & 0x7) << 4) | ((level & 0x3C0) >> 6) | (1 << 7));
+        Serial.write(((sendMarkerNext << 6) | (level & 0x3F)) & ~(1 << 7));
       
-    // reset the marker
-    sendMarkerNext = 0;
+        // reset the marker
+        sendMarkerNext = 0;
+      }
     }
   }
 }
@@ -224,7 +234,7 @@ void configureDMA()
   DMA2_Stream0->CR |= DMA_SxCR_CIRC;
 
   // enable transfer complete interrupt;
-  //DMA2_Stream0->CR |= DMA_SxCR_TCIE;
+  DMA2_Stream0->CR |= DMA_SxCR_TCIE;
 
   // disable fifo/overrun/underrun interrupts;
   //DMA2_Stream0->FCR |= &= ~(DMA_SxFCR_FEIE);
@@ -239,10 +249,6 @@ void configureADC()
   ADC1->CR2 &= ~(ADC_CR2_SWSTART);
   ADC1->CR2 &= ~(ADC_CR2_ADON);
 
-  //ADC_ChannelConfTypeDef sConfig;
-
-  //hadc1.Instance = ADC1;
- 
   // initialise sensors;
   for (int i = 0; i < MAX_SENSORS; i++)
   { 
@@ -259,6 +265,9 @@ void configureADC()
       // set pins to analog input in the GPIO mode register;
       GPIOA->MODER |= (0x3 << (activeSensorCount * 2));
       
+      // set the conversion time as high as possible;
+      ADC1->SMPR2 |= (0x6 << (activeSensorCount * 3));
+
       // keep track of active sensor count for the DMA;
       activeSensorCount++;
     }
@@ -306,16 +315,12 @@ void generateVirtualAddresses()
   }
 }
 
-int thing = 0;
-
-void DMA2_Stream0_IRQHandler(void) {
-  NVIC_ClearPendingIRQ(DMA2_Stream0_IRQn);
-  thing = 1;
-  NVIC_DisableIRQ(DMA2_Stream0_IRQn);
-  //if (DMA2->LISR & (1 << 4)) {
-  //  Serial.println("a");
-  //}
-}
+//extern "C" {
+//  void DMA2_Stream0_IRQHandler(void) {
+//    NVIC_ClearPendingIRQ(DMA2_Stream0_IRQn);
+//    Serial.println('a');
+//  }
+//}
 
 void setup()
 {
@@ -325,7 +330,7 @@ void setup()
   // populate VirtAddVarTab memory with addresses incremented from the BASE;
   generateVirtualAddresses();
 
-  DMA_InitTypeDef DMA_InitStructure;
+//  DMA_InitTypeDef DMA_InitStructure;
 
   // unlock flash memory;
   HAL_FLASH_Unlock();
@@ -336,13 +341,13 @@ void setup()
   // configure the sensors from emulated EEPROM;
   configureFromEEEPROM();
 
-  //NVIC_SetPriority(DMA2_Stream0_IRQn, 2);
+  NVIC_SetPriority(DMA2_Stream0_IRQn, 2);
 
   NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
-  NVIC_SetPendingIRQ(DMA2_Stream0_IRQn);
+  //NVIC_SetPendingIRQ(DMA2_Stream0_IRQn);
 
-  NVIC_DisableIRQ(DMA2_Stream0_IRQn);
+  //NVIC_DisableIRQ(DMA2_Stream0_IRQn);
   
   // enable ADC system clock;
   RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
@@ -352,32 +357,17 @@ void setup()
 
   // configure the ADC;
   configureADC();
-
-
 }
 
 void loop()
 { 
-  delay(1000);
-  if (DMA2->LISR & (1 << 4)) {
-    //Serial.write("HTIF");
-  }
-  if (DMA2->LISR & (1 << 5)) {
-    //Serial.write("TCIF");
-  }
-  //NVIC_SetPendingIRQ(DMA2_Stream0_IRQn);  
-
-  //Serial.write(DMA2_Stream0->CR,HEX);
-  Serial.println(thing);  
-
-  DMA2->LIFCR |= (1 << 4);
-  DMA2->LIFCR |= (1 << 5);
-
+  //delay(1000);
+  //NVIC_SetPendingIRQ(DMA2_Stream0_IRQn);
   // check if the conversion has ended;
   //if (DMA2->LISR & (1 << 4))
   //{
   //  ADC_Handler();
   //}
   // manually check if there is input from the host;
-  //serialEvent();  
+  serialEvent();  
 }
