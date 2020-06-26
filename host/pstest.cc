@@ -37,7 +37,7 @@ void usage(char *argv[])
 
 int main(int argc, char *argv[])
 {
-  const char *device = "/dev/ttyACM1", *dumpFileName = "output.txt";
+  const char *device = "/dev/ttyACM2", *dumpFileName = "output.txt";
 
   PowerSensor::PowerSensor powerSensor(device);
   powerSensor.dump(dumpFileName);

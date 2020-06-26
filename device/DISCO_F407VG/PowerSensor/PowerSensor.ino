@@ -330,7 +330,7 @@ void setup()
   // populate VirtAddVarTab memory with addresses incremented from the BASE;
   generateVirtualAddresses();
 
-//  DMA_InitTypeDef DMA_InitStructure;
+  DMA_InitTypeDef DMA_InitStructure;
 
   // unlock flash memory;
   HAL_FLASH_Unlock();
@@ -343,7 +343,7 @@ void setup()
 
   NVIC_SetPriority(DMA2_Stream0_IRQn, 2);
 
-  NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+  //NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
   //NVIC_SetPendingIRQ(DMA2_Stream0_IRQn);
 
@@ -357,10 +357,24 @@ void setup()
 
   // configure the ADC;
   configureADC();
+
+  //RCC->AHB1ENR |= 0x8;
+  //GPIOD->MODER |= 0x5;
+  //GPIOD->OTYPER |= 0x3;
+  //GPIOD->PUPDR |= 0x5;
 }
 
 void loop()
 { 
+  //delay(5000);
+  //Serial.println("Turning on D0");
+  //GPIOD->ODR &= ~(0x0002);
+  //GPIOD->ODR |= 0x0001;
+  //delay(5000); 
+  //Serial.println("Turning on D1");
+  //GPIOD->ODR &= ~(0x0001);
+  //GPIOD->ODR |= 0x0002; 
+
   //delay(1000);
   //NVIC_SetPendingIRQ(DMA2_Stream0_IRQn);
   // check if the conversion has ended;
