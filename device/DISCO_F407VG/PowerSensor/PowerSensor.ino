@@ -150,8 +150,8 @@ void serialEvent()
       // X: shutdown character, turns the stream off and kills the IOthread;
       case 'X':
         streamValues = false;
-	Serial.write((const uint8_t []) { 0xFF, 0x3F}, 2);
-        Serial.write((const uint8_t []) { 0xFF, 0x3F}, 2);
+	Serial.write((const uint8_t []) { 0xFE, 0x3F}, 2);
+        Serial.write((const uint8_t []) { 0xFE, 0x3F}, 2);
         break;
 
       case 'M': // M: marker character, places a marker in the output file;
@@ -173,7 +173,7 @@ void ADC_Handler(void)
   if (streamValues)
   {  
   // for every sensor there is send value;
-  for (int i = 0; i < activeSensorCount; i++)
+  for (int i = 0; i < 4; i++)
   {
     uint16_t level = dmaBuffer[i]; //ADC1_BASE->DR;
 

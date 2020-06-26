@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
   PowerSensor::PowerSensor powerSensor(device);
   powerSensor.dump(dumpFileName);
 
-  usleep(100000);
+  usleep(1000000);
   
   return 0;
 }

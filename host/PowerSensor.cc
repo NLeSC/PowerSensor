@@ -142,7 +142,7 @@ namespace PowerSensor
 
     // set control mode flags;
     terminalOptions.c_cflag |= CLOCAL | CREAD | CS8;
-    terminalOptions.c_cflag |= (PARENB | PARODD);	
+   // terminalOptions.c_cflag |= (PARENB | PARODD);	
 
     // set input mode flags;
     terminalOptions.c_iflag = 0;
@@ -320,7 +320,7 @@ namespace PowerSensor
       else if ((bytesRead += returnValue) == sizeof buffer) //if ((bytesRead += returnValue) == sizeof buffer)
       {
         // if the received corresponds to kill signal, return false to terminate the IOthread;
-        if (buffer[0] == 0xFF && buffer[1] == 0x3F)
+        if (buffer[0] == 0xFE && buffer[1] == 0x3F)
         {
           std::cout << 'D' << std::endl;
           return false;
