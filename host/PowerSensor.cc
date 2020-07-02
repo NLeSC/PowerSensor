@@ -55,11 +55,14 @@ namespace PowerSensor
       }
     } while ((bytesRead += retval) < sizeof eeprom);
 
-#if defined __BIG_ENDIAN__
-    eeprom.volt = __bswap_32(eeprom.volt);
-    eeprom.type = __bswap_32(eeprom.type);
-    eeprom.nullLevel = __bswap_32(eeprom.nullLevel);
-#endif
+    //std::cout << "......" << std::endl;
+    //std::cout << eeprom.volt << std::endl;
+    //std::cout << eeprom.type << std::endl;
+    //std::cout << eeprom.nullLevel << std::endl;
+
+    volt = eeprom.volt;
+    type = eeprom.type;
+    nullLevel = eeprom.nullLevel;
   }
 
   void PowerSensor::Sensor::writeToEEPROM(int fd) const
@@ -145,7 +148,7 @@ namespace PowerSensor
 
     // set control mode flags;
     terminalOptions.c_cflag |= CLOCAL | CREAD | CS8;
-    //terminalOptions.c_cflag &= ~(PARENB | PARODD); // was |=
+    //terminalOptions.c_cflag |= (PARENB | PARODD); // was |=
 
     // set input mode flags;
     terminalOptions.c_iflag = 0;
@@ -198,8 +201,11 @@ namespace PowerSensor
       exit(1);
     }
 
-    for (Sensor &sensor : sensors)
+    std::cout << "READ FROM EEPROM" << std::endl;
+    for (Sensor &sensor : sensors) {
       sensor.readFromEEPROM(fd);
+      std::cout << sensor.volt << ' ' << sensor.type << ' '<< sensor.nullLevel <<  std::endl;
+    }
   }
 
   void PowerSensor::writeSensorsToEEPROM()
@@ -212,24 +218,11 @@ namespace PowerSensor
       exit(1);
     }
 
-#if defined UNO
-    struct termios options;
-
-    usleep(200000);
-    tcgetattr(fd, &options);
-    cfsetospeed(&options, B115200);
-    tcsetattr(fd, TCSANOW, &options);
-#endif
-
-    for (const Sensor &sensor : sensors)
+    std::cout << "WRITE	TO EEPROM" << std::endl; 
+    for (const Sensor &sensor : sensors) {
+      std::cout << sensor.volt << ' ' << sensor.type << ' ' << sensor.nullLevel << std::endl;
       sensor.writeToEEPROM(fd);
-
-#if defined UNO
-    usleep(200000);
-    tcgetattr(fd, &options);
-    cfsetospeed(&options, B2000000);
-    tcsetattr(fd, TCSANOW, &options);
-#endif
+    }
 
     startIOthread();
   }
@@ -399,9 +392,6 @@ namespace PowerSensor
 	{
 	  writeMarker();
 	}
-	//if (sensorNumber == 0) {
-          //*dumpFile << level << std::endl;
-	//}
 	dumpCurrentWattToFile();
       }
     }
