@@ -133,15 +133,15 @@ void serialEvent()
     switch (Serial.read())
     {
       case 'R':
-        NVIC_DisableIRQ(DMA2_Stream0_IRQn);
+        //NVIC_DisableIRQ(DMA2_Stream0_IRQn);
         readConfig();
-        NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+        //NVIC_EnableIRQ(DMA2_Stream0_IRQn);
         break;
 
       case 'W':
-        NVIC_DisableIRQ(DMA2_Stream0_IRQn);
+        //NVIC_DisableIRQ(DMA2_Stream0_IRQn);
         writeConfig();
-        NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+        //NVIC_EnableIRQ(DMA2_Stream0_IRQn);
         break;
 
       // S: start character, turns the streaming of values on;
@@ -158,6 +158,7 @@ void serialEvent()
 
       // X: shutdown character, turns the stream off and kills the IOthread;
       case 'X':
+        NVIC_DisableIRQ(DMA2_Stream0_IRQn);
         streamValues = false;
 	Serial.write((const uint8_t []) { 0xFF, 0x3F}, 2);
         Serial.write((const uint8_t []) { 0xFF, 0x3F}, 2);

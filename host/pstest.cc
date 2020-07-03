@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
   //powerSensor.writeSensorsToEEPROM()
   powerSensor.dump(dumpFileName);
 
-  usleep(1000000);
+  usleep(100000);
   
   return 0;
 }

@@ -201,10 +201,10 @@ namespace PowerSensor
       exit(1);
     }
 
-    std::cout << "READ FROM EEPROM" << std::endl;
+    //std::cout << "READ FROM EEPROM" << std::endl;
     for (Sensor &sensor : sensors) {
       sensor.readFromEEPROM(fd);
-      std::cout << sensor.volt << ' ' << sensor.type << ' '<< sensor.nullLevel <<  std::endl;
+      //std::cout << sensor.volt << ' ' << sensor.type << ' '<< sensor.nullLevel <<  std::endl;
     }
   }
 
@@ -218,9 +218,9 @@ namespace PowerSensor
       exit(1);
     }
 
-    std::cout << "WRITE	TO EEPROM" << std::endl; 
+    //std::cout << "WRITE	TO EEPROM" << std::endl; 
     for (const Sensor &sensor : sensors) {
-      std::cout << sensor.volt << ' ' << sensor.type << ' ' << sensor.nullLevel << std::endl;
+      //std::cout << sensor.volt << ' ' << sensor.type << ' ' << sensor.nullLevel << std::endl;
       sensor.writeToEEPROM(fd);
     }
 
@@ -392,6 +392,7 @@ namespace PowerSensor
 	{
 	  writeMarker();
 	}
+	//*dumpFile << sensorNumber << ' ' << level << std::endl;
 	dumpCurrentWattToFile();
       }
     }
