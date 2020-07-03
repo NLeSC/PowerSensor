@@ -60,9 +60,9 @@ namespace PowerSensor
     //std::cout << eeprom.type << std::endl;
     //std::cout << eeprom.nullLevel << std::endl;
 
-    volt = eeprom.volt;
-    type = eeprom.type;
-    nullLevel = eeprom.nullLevel;
+    setVolt(eeprom.volt);
+    setType(eeprom.type);
+    setNullLevel(eeprom.nullLevel);
   }
 
   void PowerSensor::Sensor::writeToEEPROM(int fd) const

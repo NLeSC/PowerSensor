@@ -41,9 +41,9 @@ int main(int argc, char *argv[])
 
   PowerSensor::PowerSensor powerSensor(device);
   //powerSensor.writeSensorsToEEPROM()
-  //powerSensor.dump(dumpFileName);
+  powerSensor.dump(dumpFileName);
 
-  //usleep(1000000);
+  usleep(1000000);
   
   return 0;
 }
