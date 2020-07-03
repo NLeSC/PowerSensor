@@ -38,6 +38,9 @@
 namespace PowerSensor
 {
 
+  int countera = 0;
+  int counterb = 0;
+
   void PowerSensor::Sensor::readFromEEPROM(int fd)
   {
     struct EEPROM eeprom;
@@ -52,11 +55,14 @@ namespace PowerSensor
       }
     } while ((bytesRead += retval) < sizeof eeprom);
 
-#if defined __BIG_ENDIAN__
-    eeprom.volt = __bswap_32(eeprom.volt);
-    eeprom.type = __bswap_32(eeprom.type);
-    eeprom.nullLevel = __bswap_32(eeprom.nullLevel);
-#endif
+    //std::cout << "......" << std::endl;
+    //std::cout << eeprom.volt << std::endl;
+    //std::cout << eeprom.type << std::endl;
+    //std::cout << eeprom.nullLevel << std::endl;
+
+    setVolt(eeprom.volt);
+    setType(eeprom.type);
+    setNullLevel(eeprom.nullLevel);
   }
 
   void PowerSensor::Sensor::writeToEEPROM(int fd) const
@@ -142,11 +148,16 @@ namespace PowerSensor
 
     // set control mode flags;
     terminalOptions.c_cflag |= CLOCAL | CREAD | CS8;
+<<<<<<< HEAD
    // terminalOptions.c_cflag |= (PARENB | PARODD);	
+=======
+    //terminalOptions.c_cflag |= (PARENB | PARODD); // was |=
+>>>>>>> feature/interrupt_based
 
     // set input mode flags;
     terminalOptions.c_iflag = 0;
-    terminalOptions.c_iflag |= IGNBRK;			
+    terminalOptions.c_iflag |= IGNBRK | IGNCR;
+    //terminalOptions.c_iflag &= ~(IXON | IXOFF | IXANY); // was not there    
 
     // clear local mode flag
     terminalOptions.c_lflag = 0;
@@ -180,7 +191,8 @@ namespace PowerSensor
   PowerSensor::~PowerSensor()
   {
     stopIOthread();
-
+    std::cout << countera << std::endl;
+    std::cout << counterb << std::endl;
     if (close(fd))
       perror("close device");
   }
@@ -193,8 +205,11 @@ namespace PowerSensor
       exit(1);
     }
 
-    for (Sensor &sensor : sensors)
+    //std::cout << "READ FROM EEPROM" << std::endl;
+    for (Sensor &sensor : sensors) {
       sensor.readFromEEPROM(fd);
+      //std::cout << sensor.volt << ' ' << sensor.type << ' '<< sensor.nullLevel <<  std::endl;
+    }
   }
 
   void PowerSensor::writeSensorsToEEPROM()
@@ -207,24 +222,11 @@ namespace PowerSensor
       exit(1);
     }
 
-#if defined UNO
-    struct termios options;
-
-    usleep(200000);
-    tcgetattr(fd, &options);
-    cfsetospeed(&options, B115200);
-    tcsetattr(fd, TCSANOW, &options);
-#endif
-
-    for (const Sensor &sensor : sensors)
+    //std::cout << "WRITE	TO EEPROM" << std::endl; 
+    for (const Sensor &sensor : sensors) {
+      //std::cout << sensor.volt << ' ' << sensor.type << ' ' << sensor.nullLevel << std::endl;
       sensor.writeToEEPROM(fd);
-
-#if defined UNO
-    usleep(200000);
-    tcgetattr(fd, &options);
-    cfsetospeed(&options, B2000000);
-    tcsetattr(fd, TCSANOW, &options);
-#endif
+    }
 
     startIOthread();
   }
@@ -322,7 +324,7 @@ namespace PowerSensor
         // if the received corresponds to kill signal, return false to terminate the IOthread;
         if (buffer[0] == 0xFE && buffer[1] == 0x3F)
         {
-          std::cout << 'D' << std::endl;
+          //std::cout << 'D' << std::endl;
           return false;
         }
         // checks if first byte corresponds with predetermined first byte format;
@@ -330,7 +332,7 @@ namespace PowerSensor
                  ((buffer[1] & 0x80) == 0))
         {
           //std::cout << 'G';
-          //countera++;
+          countera++;
 
           // extracts sensor number;
           sensorNumber = (buffer[0] >> 4) & 0x7;
@@ -344,8 +346,8 @@ namespace PowerSensor
         }
         else
         {
-          //counterb++;
-	  std::cout << "lost" << std::endl;
+          counterb++;
+	  //std::cout << "lost" << std::endl;
           // if a byte is lost, drop the first byte and try again;
           buffer[0] = buffer[1];
 
@@ -394,7 +396,8 @@ namespace PowerSensor
 	{
 	  writeMarker();
 	}
-        dumpCurrentWattToFile();
+	//*dumpFile << sensorNumber << ' ' << level << std::endl;
+	dumpCurrentWattToFile();
       }
     }
   }

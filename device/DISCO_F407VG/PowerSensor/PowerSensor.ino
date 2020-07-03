@@ -1,4 +1,7 @@
 #include <Arduino.h>
+#include <TFT.h>
+#include <SPI.h>
+
 #include "eeprom_emulation.h"
 
 // define max sensors and emulated EEPROM base address
@@ -28,7 +31,7 @@ struct EEPROM {
 };
 
 // Calculates the size of the EEPROM struct in halfwords (16b);
-const uint16_t eepromSize = sizeof(EEPROM) / 2;
+const uint16_t eepromSize = (sizeof(EEPROM) / 2);
 
 // Reserves appropriate amount of memory for virtual address table;
 uint16_t VirtAddVarTab[eepromSize];
@@ -130,25 +133,32 @@ void serialEvent()
     switch (Serial.read())
     {
       case 'R':
+        //NVIC_DisableIRQ(DMA2_Stream0_IRQn);
         readConfig();
+        //NVIC_EnableIRQ(DMA2_Stream0_IRQn);
         break;
 
       case 'W':
+        //NVIC_DisableIRQ(DMA2_Stream0_IRQn);
         writeConfig();
+        //NVIC_EnableIRQ(DMA2_Stream0_IRQn);
         break;
 
       // S: start character, turns the streaming of values on;
       case 'S':
+        NVIC_EnableIRQ(DMA2_Stream0_IRQn);
         streamValues = true;
         break;
 
       // T: stop character, turns the streaming of values off;
       case 'T':
+        NVIC_DisableIRQ(DMA2_Stream0_IRQn);
         streamValues = false;
         break;
 
       // X: shutdown character, turns the stream off and kills the IOthread;
       case 'X':
+        NVIC_DisableIRQ(DMA2_Stream0_IRQn);
         streamValues = false;
 	Serial.write((const uint8_t []) { 0xFE, 0x3F}, 2);
         Serial.write((const uint8_t []) { 0xFE, 0x3F}, 2);
@@ -157,16 +167,11 @@ void serialEvent()
       case 'M': // M: marker character, places a marker in the output file;
         sendMarkerNext = 1;
         break;
-
-      case 'C': // C: calibrate character, initiates the calibration process;
-        
-
-      default:
-        break;
     }
   }
 }
 
+<<<<<<< HEAD
 // "__irq_adc" is used as weak method in stm32f407 CMSIS startup file;
 void ADC_Handler(void)
 {
@@ -174,15 +179,31 @@ void ADC_Handler(void)
   {  
   // for every sensor there is send value;
   for (int i = 0; i < 4; i++)
+=======
+extern "C" {
+  void DMA2_Stream0_IRQHandler(void)
+>>>>>>> feature/interrupt_based
   {
-    uint16_t level = dmaBuffer[i]; //ADC1_BASE->DR;
+    // clear the interrupt in the vector table
+    NVIC_ClearPendingIRQ(DMA2_Stream0_IRQn);
+    
+    // set the clear flag bit in the low cr
+    DMA2->LIFCR |= (0x3 << 4);
 
-    // write the level, write() only writes per byte;
-    Serial.write(((i & 0x7) << 4) | ((level & 0x3C0) >> 6) | (1 << 7));
-    Serial.write(((sendMarkerNext << 6) | (level & 0x3F)) & ~(1 << 7));
+    if (streamValues)
+    {  
+      // for every sensor there is send value;
+      for (int i = 0; i < activeSensorCount; i++)
+      {
+        uint16_t level = dmaBuffer[i]; //ADC1_BASE->DR;
+
+        // write the level, write() only writes per byte;
+        Serial.write(((i & 0x7) << 4) | ((level & 0x3C0) >> 6) | (1 << 7));
+        Serial.write(((sendMarkerNext << 6) | (level & 0x3F)) & ~(1 << 7));
       
-    // reset the marker
-    sendMarkerNext = 0;
+        // reset the marker
+        sendMarkerNext = 0;
+      }
     }
   }
 }
@@ -223,6 +244,9 @@ void configureDMA()
   // set DMA to circular mode so it will refill the increment once its empty;
   DMA2_Stream0->CR |= DMA_SxCR_CIRC;
 
+  // enable transfer complete interrupt;
+  DMA2_Stream0->CR |= DMA_SxCR_TCIE;
+
   // after all configurations are done, set the enable bit;
   DMA2_Stream0->CR |= DMA_SxCR_EN;
 }
@@ -249,6 +273,9 @@ void configureADC()
       // set pins to analog input in the GPIO mode register;
       GPIOA->MODER |= (0x3 << (activeSensorCount * 2));
       
+      // set the conversion time as high as possible;
+      ADC1->SMPR2 |= (0x6 << (activeSensorCount * 3));
+
       // keep track of active sensor count for the DMA;
       activeSensorCount++;
     }
@@ -296,12 +323,14 @@ void generateVirtualAddresses()
   }
 }
 
+EEPROM thing;
+
 void setup()
 {
   // baudrate 4M;
   Serial.begin(40000000);
 
-  // populate VirtAddVarTab memory with addresses incremented from BASE;
+  // populate VirtAddVarTab memory with addresses incremented from the BASE;
   generateVirtualAddresses();
 
   // unlock flash memory;
@@ -313,6 +342,8 @@ void setup()
   // configure the sensors from emulated EEPROM;
   configureFromEEEPROM();
 
+  NVIC_SetPriority(DMA2_Stream0_IRQn, 2);
+  
   // enable ADC system clock;
   RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
 
@@ -321,15 +352,28 @@ void setup()
 
   // configure the ADC;
   configureADC();
+
+  //for (int i = 0; i < 4; i++) {
+  //  thing.sensors[i].volt = 12;
+  //  thing.sensors[i].type = .185;
+  //  thing.sensors[i].nullLevel = 798;
+  //}
+
+  //writeConfigurationToEEPROM(thing);
+
+  //thing = readSensorConfiguration();
 }
 
 void loop()
-{ 
-  // check if the conversion has ended;
-  if (DMA2->LISR & (1 << 4))
-  {
-    ADC_Handler();
-  }
+{
+  //for (int i = 0; i < 4; i++) {
+  //Serial.println(i);
+  //Serial.println(thing.sensors[i].volt);
+  //Serial.println(thing.sensors[i].type);
+  //Serial.println(thing.sensors[i].nullLevel);
+  //Serial.println();
+  //}
+  //delay(1000);
   // manually check if there is input from the host;
   serialEvent();  
 }

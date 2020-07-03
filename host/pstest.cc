@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
   const char *device = "/dev/ttyACM1", *dumpFileName = "output.txt";
 
   PowerSensor::PowerSensor powerSensor(device);
+  //powerSensor.writeSensorsToEEPROM()
   powerSensor.dump(dumpFileName);
 
   usleep(1000000);
